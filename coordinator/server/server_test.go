@@ -23,6 +23,7 @@ import (
 	"github.com/edgelesssys/marblerun/coordinator/core"
 	"github.com/edgelesssys/marblerun/test"
 	"github.com/edgelesssys/marblerun/util"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -150,7 +151,7 @@ func TestSetSecret(t *testing.T) {
 	assert.NoError(err)
 }
 
-func testRequestWithCert(req *http.Request, resp *httptest.ResponseRecorder, mux *http.ServeMux) error {
+func testRequestWithCert(req *http.Request, resp *httptest.ResponseRecorder, mux *mux.Router) error {
 	mux.ServeHTTP(resp, req)
 	if resp.Code != http.StatusUnauthorized {
 		return errors.New("request without certificate was not rejected")

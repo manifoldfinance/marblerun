@@ -1,0 +1,286 @@
+definitions:
+  server.GeneralResponse:
+    properties:
+      data:
+        type: object
+      message:
+        description: only used when status = "error"
+        example: error message
+        type: string
+      status:
+        example: success
+        type: string
+    type: object
+  server.certQuoteResp:
+    properties:
+      cert:
+        type: string
+      quote:
+        items:
+          type: integer
+        type: array
+    type: object
+  server.manifestSignatureResp:
+    properties:
+      manifestSignature:
+        example: 3fff78e99dd9bd801e0a3a22b7f7a24a492302c4d00546d18c7f7ed6e26e95c3
+        type: string
+    type: object
+  server.recoveryDataResp:
+    properties:
+      recoverySecrets:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  server.recoveryStatusResp:
+    properties:
+      statusMessage:
+        type: string
+    type: object
+  server.statusResp:
+    properties:
+      statusCode:
+        example: 2
+        type: integer
+      statusMessage:
+        example: Coordinator is ready to accept a manifest.
+        type: string
+    type: object
+info:
+  contact:
+    email: contact@edgeless.systems
+    name: Marblerun support
+    url: https://www.marblerun.sh/community/
+  description: |
+    The Client API is designed as an HTTP-REST interface. Responses follow the JSend style.
+  license:
+    name: Apache Mozilla Public License, v. 2.0
+    url: https://mozilla.org/MPL/2.0/
+  title: Marblerun Coordinator Client API
+  version: 0.3.2
+paths:
+  /manifest:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.GeneralResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/server.manifestSignatureResp'
+              type: object
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Get a SHA-256 of the currently set manifest.
+      tags:
+      - manifest
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Before deploying the application to the cluster the manifest needs to be set once by the provider.
+        On success, an array containing key-value mapping for encrypted secrets to be used for recovering the Coordinator in case of disaster recovery. The key matches each supplied key from RecoveryKeys in the Manifest.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.GeneralResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/server.recoveryDataResp'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "405":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Set a manifest.
+      tags:
+      - manifest
+  /quote:
+    get:
+      consumes:
+      - application/json
+      description: For retrieving a remote attestation quote over the whole cluster
+        and the root certificate. The quote is an [SGX-DCAP quote](https://download.01.org/intel-sgx/sgx-dcap/1.9/linux/docs/Intel_SGX_DCAP_ECDSA_Orientation.pdf).
+        Both the provider and the users of the confidential application can use this
+        endpoint to verify the integrity of the Coordinator and the cluster at any
+        time.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.GeneralResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/server.certQuoteResp'
+              type: object
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Retrieve a remote attestation quote.
+      tags:
+      - quote
+  /recover:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        This API endpoint is only available when the coordinator is in recovery mode. Before you can use the endpoint, you need to decrypt the recovery secret which you may have received when setting the manifest initially.
+        See [Recovering the Coordinator](https://marblerun.sh/docs/workflows/recover-coordinator/) to retrieve the recovery key needed to use this API endpoint correctly.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.GeneralResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/server.recoveryStatusResp'
+              type: object
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Recover the Coordinator when unsealing the existing state fails.
+      tags:
+      - recover
+  /secret:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "405":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      tags:
+      - secret
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "405":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      tags:
+      - secret
+  /status:
+    get:
+      description: |-
+        The status indicates the current state of the coordinator, and can be one of the following:
+        - **0 recovery mode**: Found a sealed state of an old seal key. Waiting for user input on [/recover](https://marblerun.sh/docs/features/recovery/).
+        - **1 uninitialized**: Fresh start, initializing the Coordinator.
+        - **2 waiting for a manifest**: Waiting for user input on [/manifest](https://marblerun.sh/docs/workflows/set-manifest/)
+        - **3 accepting marbles**: Accepting Marbles through the [Marble API](https://marblerun.sh/docs/workflows/add-service/)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/server.GeneralResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/server.statusResp'
+              type: object
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Get the current status of the Coordinator.
+      tags:
+      - status
+  /update:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        This API endpoint only works when admins were defined in the Manifest.
+        For more information, look up [Updating a Manifest](https://marblerun.sh/docs/workflows/update-manifest/).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "405":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+        "500":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.GeneralResponse'
+      summary: Update the packages specified in the currently set Manifest.
+      tags:
+      - update
+swagger: "2.0"

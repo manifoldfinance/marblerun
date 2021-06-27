@@ -1,0 +1,433 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "The Client API is designed as an HTTP-REST interface. Responses follow the JSend style.\n",
+        "title": "Marblerun Coordinator Client API",
+        "contact": {
+            "name": "Marblerun support",
+            "url": "https://www.marblerun.sh/community/",
+            "email": "contact@edgeless.systems"
+        },
+        "license": {
+            "name": "Apache Mozilla Public License, v. 2.0",
+            "url": "https://mozilla.org/MPL/2.0/"
+        },
+        "version": "0.3.2"
+    },
+    "paths": {
+        "/manifest": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manifest"
+                ],
+                "summary": "Get a SHA-256 of the currently set manifest.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/server.GeneralResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/server.manifestSignatureResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Before deploying the application to the cluster the manifest needs to be set once by the provider.\nOn success, an array containing key-value mapping for encrypted secrets to be used for recovering the Coordinator in case of disaster recovery. The key matches each supplied key from RecoveryKeys in the Manifest.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manifest"
+                ],
+                "summary": "Set a manifest.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/server.GeneralResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/server.recoveryDataResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/quote": {
+            "get": {
+                "description": "For retrieving a remote attestation quote over the whole cluster and the root certificate. The quote is an [SGX-DCAP quote](https://download.01.org/intel-sgx/sgx-dcap/1.9/linux/docs/Intel_SGX_DCAP_ECDSA_Orientation.pdf). Both the provider and the users of the confidential application can use this endpoint to verify the integrity of the Coordinator and the cluster at any time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quote"
+                ],
+                "summary": "Retrieve a remote attestation quote.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/server.GeneralResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/server.certQuoteResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/recover": {
+            "post": {
+                "description": "This API endpoint is only available when the coordinator is in recovery mode. Before you can use the endpoint, you need to decrypt the recovery secret which you may have received when setting the manifest initially.\nSee [Recovering the Coordinator](https://marblerun.sh/docs/workflows/recover-coordinator/) to retrieve the recovery key needed to use this API endpoint correctly.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recover"
+                ],
+                "summary": "Recover the Coordinator when unsealing the existing state fails.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/server.GeneralResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/server.recoveryStatusResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/secret": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secret"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secret"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/status": {
+            "get": {
+                "description": "The status indicates the current state of the coordinator, and can be one of the following:\n- **0 recovery mode**: Found a sealed state of an old seal key. Waiting for user input on [/recover](https://marblerun.sh/docs/features/recovery/).\n- **1 uninitialized**: Fresh start, initializing the Coordinator.\n- **2 waiting for a manifest**: Waiting for user input on [/manifest](https://marblerun.sh/docs/workflows/set-manifest/)\n- **3 accepting marbles**: Accepting Marbles through the [Marble API](https://marblerun.sh/docs/workflows/add-service/)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Get the current status of the Coordinator.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/server.GeneralResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/server.statusResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/update": {
+            "post": {
+                "description": "This API endpoint only works when admins were defined in the Manifest.\nFor more information, look up [Updating a Manifest](https://marblerun.sh/docs/workflows/update-manifest/).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "update"
+                ],
+                "summary": "Update the packages specified in the currently set Manifest.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.GeneralResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "server.GeneralResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object"
+                },
+                "message": {
+                    "description": "only used when status = \"error\"",
+                    "type": "string",
+                    "example": "error message"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "success"
+                }
+            }
+        },
+        "server.certQuoteResp": {
+            "type": "object",
+            "properties": {
+                "cert": {
+                    "type": "string"
+                },
+                "quote": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "server.manifestSignatureResp": {
+            "type": "object",
+            "properties": {
+                "manifestSignature": {
+                    "type": "string",
+                    "example": "3fff78e99dd9bd801e0a3a22b7f7a24a492302c4d00546d18c7f7ed6e26e95c3"
+                }
+            }
+        },
+        "server.recoveryDataResp": {
+            "type": "object",
+            "properties": {
+                "recoverySecrets": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "server.recoveryStatusResp": {
+            "type": "object",
+            "properties": {
+                "statusMessage": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.statusResp": {
+            "type": "object",
+            "properties": {
+                "statusCode": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "statusMessage": {
+                    "type": "string",
+                    "example": "Coordinator is ready to accept a manifest."
+                }
+            }
+        }
+    }
+}

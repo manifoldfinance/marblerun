@@ -9,11 +9,7 @@ package server
 
 import (
 	"crypto/tls"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -22,6 +18,7 @@ import (
 	"github.com/edgelesssys/marblerun/coordinator/rpc"
 	"github.com/edgelesssys/marblerun/coordinator/user"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -34,20 +31,20 @@ import (
 
 // GeneralResponse is a wrapper for all our REST API responses to follow the JSend style: https://github.com/omniti-labs/jsend
 type GeneralResponse struct {
-	Status  string      `json:"status"`
-	Data    interface{} `json:"data"`
-	Message string      `json:"message,omitempty"` // only used when status = "error"
+	Status  string      `json:"status" example:"success"`                  // success or error
+	Data    interface{} `json:"data"`                                      // may be null, allways null for errors
+	Message string      `json:"message,omitempty" example:"error message"` // only used for errors
 }
 type certQuoteResp struct {
 	Cert  string
 	Quote []byte
 }
 type statusResp struct {
-	StatusCode    int
-	StatusMessage string
+	StatusCode    int    `example:"2"`
+	StatusMessage string `example:"Coordinator is ready to accept a manifest."`
 }
 type manifestSignatureResp struct {
-	ManifestSignature string
+	ManifestSignature string `example:"3fff78e99dd9bd801e0a3a22b7f7a24a492302c4d00546d18c7f7ed6e26e95c3"`
 }
 
 // Contains RSA-encrypted AES state sealing key with public key specified by user in manifest
@@ -101,170 +98,24 @@ func RunMarbleServer(core *core.Core, addr string, addrChan chan string, errChan
 }
 
 // CreateServeMux creates a mux that serves the client API.
-func CreateServeMux(cc core.ClientCore) *http.ServeMux {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			statusCode, status, err := cc.GetStatus(r.Context())
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			writeJSON(w, statusResp{statusCode, status})
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/manifest", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			signature := cc.GetManifestSignature(r.Context())
-			writeJSON(w, manifestSignatureResp{hex.EncodeToString(signature)})
-		case http.MethodPost:
-			manifest, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			recoverySecretMap, err := cc.SetManifest(r.Context(), manifest)
-
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			// If recovery data is set, return it
-			if len(recoverySecretMap) > 0 {
-				secretMap := make(map[string]string, len(recoverySecretMap))
-				for name, secret := range recoverySecretMap {
-					secretMap[name] = base64.StdEncoding.EncodeToString(secret)
-				}
-				writeJSON(w, recoveryDataResp{secretMap})
-			} else {
-				writeJSON(w, nil)
-			}
-
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/quote", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			cert, quote, err := cc.GetCertQuote(r.Context())
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			writeJSON(w, certQuoteResp{cert, quote})
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/recover", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodPost:
-			key, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			// Perform recover and receive amount of remaining secrets (for multi-party recovery)
-			remaining, err := cc.Recover(r.Context(), key)
-
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			// Construct status message based on remaining keys
-			var statusMessage string
-			if remaining != 0 {
-				statusMessage = fmt.Sprintf("Secret was processed successfully. Upload the next secret. Remaining secrets: %d", remaining)
-			} else {
-				statusMessage = "Recovery successful."
-			}
-
-			writeJSON(w, recoveryStatusResp{statusMessage})
-
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
-		user := verifyUser(w, r, cc)
-		if user == nil {
-			return
-		}
-
-		switch r.Method {
-		case http.MethodPost:
-			updateManifest, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			err = cc.UpdateManifest(r.Context(), updateManifest, user)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			writeJSON(w, nil)
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	mux.HandleFunc("/secrets", func(w http.ResponseWriter, r *http.Request) {
-		user := verifyUser(w, r, cc)
-		if user == nil {
-			return
-		}
-
-		switch r.Method {
-		case http.MethodPost:
-			secretManifest, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if err := cc.WriteSecrets(r.Context(), secretManifest, user); err != nil {
-				writeJSONError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			writeJSON(w, nil)
-		case http.MethodGet:
-			// Secrets are requested via the query string in the form of ?s=<secret_one>&s=<secret_two>&s=...
-			requestedSecrets := r.URL.Query()["s"]
-			if len(requestedSecrets) <= 0 {
-				writeJSONError(w, "invalid query", http.StatusBadRequest)
-				return
-			}
-			for _, req := range requestedSecrets {
-				if len(req) <= 0 {
-					writeJSONError(w, "malformed query string", http.StatusBadRequest)
-					return
-				}
-			}
-			response, err := cc.GetSecrets(r.Context(), requestedSecrets, user)
-			if err != nil {
-				writeJSONError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			writeJSON(w, response)
-		default:
-			writeJSONError(w, "", http.StatusMethodNotAllowed)
-		}
-	})
-
-	return mux
+func CreateServeMux(cc core.ClientCore) *mux.Router {
+	router := mux.NewRouter()
+	server := ClientAPIServer{cc}
+	router.HandleFunc("/status", server.getStatusHandler).Methods("GET")
+	router.HandleFunc("/status", server.methodNotAllowedHandler)
+	router.HandleFunc("/manifest", server.getManifestHandler).Methods("GET")
+	router.HandleFunc("/manifest", server.postManifestHandler).Methods("POST")
+	router.HandleFunc("/manifest", server.methodNotAllowedHandler)
+	router.HandleFunc("/quote", server.getQuoteHandler).Methods("GET")
+	router.HandleFunc("/quote", server.methodNotAllowedHandler)
+	router.HandleFunc("/recover", server.postRecoverHandler).Methods("POST")
+	router.HandleFunc("/recover", server.methodNotAllowedHandler)
+	router.HandleFunc("/update", server.postUpdateHandler).Methods("POST")
+	router.HandleFunc("/update", server.methodNotAllowedHandler)
+	router.HandleFunc("/secrets", server.postSecretHandler).Methods("POST")
+	router.HandleFunc("/secrets", server.getSecretHandler).Methods("GET")
+	router.HandleFunc("/secrets", server.methodNotAllowedHandler)
+	return router
 }
 
 func verifyUser(w http.ResponseWriter, r *http.Request, cc core.ClientCore) *user.User {
@@ -298,7 +149,7 @@ func writeJSONError(w http.ResponseWriter, errorString string, httpErrorCode int
 }
 
 // RunClientServer runs a HTTP server serving mux.
-func RunClientServer(mux *http.ServeMux, address string, tlsConfig *tls.Config, zapLogger *zap.Logger) {
+func RunClientServer(mux *mux.Router, address string, tlsConfig *tls.Config, zapLogger *zap.Logger) {
 	loggedRouter := handlers.LoggingHandler(os.Stdout, mux)
 	server := http.Server{
 		Addr:      address,
