@@ -17,18 +17,13 @@ NGINX_SRC ?= $(THIS_DIR)nginx-1.16.1
 NGINX_SHA256 ?= f11c2a6dd1d3515736f0324857957db2de98be862461b5a542a3ac6188dbe32b
 
 # Mirrors for downloading the Nginx source code
-NGINX_MIRRORS ?= \
-    http://nginx.org/download \
-    https://packages.grapheneproject.io/distfiles
+NGINX_MIRROR ?= \
+    http://nginx.org/download
 
 # Address and port for the Nginx server to listen
 LISTEN_HOST ?= 127.0.0.1
 LISTEN_PORT ?= 8002
 LISTEN_SSL_PORT ?= 8444
-
-# Relative path to Graphene root
-GRAPHENEDIR ?= $(THIS_DIR)../..
-SGX_SIGNER_KEY ?= $(GRAPHENEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
 
 ifeq ($(DEBUG),1)
 GRAPHENE_LOG_LEVEL = debug
@@ -42,7 +37,15 @@ ifeq ($(SGX),1)
 all: nginx.manifest.sgx nginx.sig nginx.token
 endif
 
-include $(GRAPHENEDIR)/Scripts/Makefile.configs
+# Download files required for Makefile include
+# These are the latest include files as of v1.12-rc1
+Makefile.Host:
+	wget "https://github.com/oscarlab/graphene/raw/06ec21be3288730f318fd99f1c70e48af25612c1/Scripts/Makefile.Host"
+
+Makefile.configs: Makefile.Host
+	wget "https://github.com/oscarlab/graphene/raw/5cb0389f56c2d1a91511fe411cca0aa914d1ff04/Scripts/Makefile.configs"
+
+include Makefile.configs
 
 # The make targets for downloading and compiling the Nginx source code, and
 # installing the binaries.
@@ -62,8 +65,8 @@ $(NGINX_SRC)/configure: $(NGINX_SRC).tar.gz
 	tar --touch -xzf $<
 
 $(NGINX_SRC).tar.gz:
-	$(GRAPHENEDIR)/Scripts/download --output $@ --sha256 $(NGINX_SHA256) \
-		$(foreach mirror,$(NGINX_MIRRORS),--url $(mirror)/$(NGINX_SRC).tar.gz)
+	wget -O $@ $(NGINX_MIRROR)/$(NGINX_SRC).tar.gz
+	echo "$(NGINX_SHA256) $(NGINX_SRC).tar.gz" | sha256sum -c
 
 nginx.manifest: nginx.manifest.template
 	graphene-manifest \
@@ -84,8 +87,9 @@ nginx.manifest.sgx: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
 		$(TEST_DATA) \
 		$(INSTALL_DIR)/conf/server.crt \
 		premain-libos
+	openssl genrsa -3 -out signer-key.pem 3072
 	graphene-sgx-sign \
-		--key $(SGX_SIGNER_KEY) \
+		--key signer-key.pem \
 		--manifest $< \
 		--output $@
 
@@ -154,7 +158,7 @@ start-graphene-server: all
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp
+	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp Makefile.Host Makefile.configs signer-key.pem
 
 .PHONY: distclean
 distclean: clean
