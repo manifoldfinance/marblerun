@@ -2,7 +2,7 @@
     "Packages": {
         "world": {
             "Debug": true,
-            "UniqueID": "<replace with mrenclave printed during the build>"
+            "UniqueID": "54dc6fbd8f540db0987daac8b3b22c03eb298fe222ec95cc9d9325c72ee35005"
         }
     },
     "Marbles": {

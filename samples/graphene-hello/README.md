@@ -2,7 +2,7 @@
 This example shows how to run a [Graphene](https://github.com/oscarlab/graphene) application in Marblerun. In essence, you have to add the `premain` process to the Graphene manifest. `premain` will contact the Coordinator, set up the environment, and run the actual application. See the commented [hello.manifest.template](hello.manifest.template) for details.
 
 ## Requirements
-First, install Graphene on [commit b37ac75](https://github.com/oscarlab/graphene/tree/b37ac75efec0c1183fd42340ce2d3e04dcfb3388). You can use either the [Building](https://graphene.readthedocs.io/en/latest/building.html) or [Cloud Deployment](https://graphene.readthedocs.io/en/latest/cloud-deployment.html) guide to build and initially setup Graphene. You will need hardware with Intel SGX support.
+First, install Graphene by using the [prebuilt release packages](https://github.com/oscarlab/graphene/releases/tag/v1.2-rc1). We tested the sample with v1.2-rc1, so we recommend that you use this version. Later versions might work too, however are untested from our side.
 
 Then, before you can run the example, make sure you got the prerequisites for ECDSA remote attestation installed on your system. You can collectively install them with the following command:
 ```sh
@@ -14,7 +14,6 @@ sudo apt install libsgx-quote-ex-dev
 ## Build
 You can build the example as follows:
 ```sh
-export GRAPHENEDIR=[PATH To Your Graphene Folder]
 make
 ```
 Then get `mr_enclave` from the build output and set it as `UniqueID` in `manifest.json`.

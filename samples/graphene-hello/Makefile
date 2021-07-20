@@ -1,11 +1,10 @@
-GRAPHENEDIR?=$(HOME)/graphene
-
 all: sign
 .PHONY: clean all
 
 
 sign: hello.manifest hello premain-libos
-	graphene-sgx-sign -output hello.manifest.sgx --manifest hello.manifest --key $(GRAPHENEDIR)/Pal/src/host/Linux-SGX/signer/enclave-key.pem
+	openssl genrsa -3 -out signer-key.pem 3072
+	graphene-sgx-sign -output hello.manifest.sgx --manifest hello.manifest --key signer-key.pem
 	graphene-sgx-get-token -sig hello.sig -output hello.token
 
 
