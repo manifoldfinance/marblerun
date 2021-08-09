@@ -1,0 +1,30 @@
+name: Publish OpenAPI documentation
+on:
+  push:
+    path:
+      - './coordinator/server/client_api.go'
+jobs:
+  publish-to-docs:
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Download go-swagger
+        run: curl -o /usr/local/bin/swagger -L'#' "$download_url"
+        env:
+          download_url : $(curl -s https://api.github.com/repos/go-swagger/go-swagger/releases/latest | jq -r '.assets[] | select(.name | contains("'"$(uname | tr '[:upper:]' '[:lower:]')"'_amd64")) | .browser_download_url')
+
+      - run: chmod +x /usr/local/bin/swagger
+
+      - name: generate Swagger file
+        run:  swagger generate spec -m --compact --exclude-deps -o ./swagger.json
+        env:
+          SWAGGER_GENERATE_EXTENSION : false
+
+      - name: Copy
+        uses: andstor/copycat-action@v3
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          src_path: /swagger.json
+          dst_path: /marblerun/_media/swagger.json
+          dst_owner: edgelesssys
+          dst_repo_name: docs.edgeless.systems
+          commit_message: Update OpenAPI doc of MarbleRun
