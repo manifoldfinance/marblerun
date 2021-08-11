@@ -95,6 +95,10 @@ func parseTreeForChanges(tree *toml.Tree) (map[string]interface{}, map[string]in
 	original["sgx.thread_num"] = tree.Get("sgx.thread_num")
 	original["sgx.trusted_files.marblerun_premain"] = tree.Get("sgx.trusted_files.marblerun_premain")
 	original["sgx.allowed_files.marblerun_uuid"] = tree.Get("sgx.allowed_files.marblerun_uuid")
+	original["loader.env.EDG_MARBLE_COORDINATOR_ADDR"] = tree.Get("loader.env.EDG_MARBLE_COORDINATOR_ADDR")
+	original["loader.env.EDG_MARBLE_TYPE"] = tree.Get("loader.env.EDG_MARBLE_TYPE")
+	original["loader.env.EDG_MARBLE_UUID_FILE"] = tree.Get("loader.env.EDG_MARBLE_UUID_FILE")
+	original["loader.env.EDG_MARBLE_DNS_NAMES"] = tree.Get("loader.env.EDG_MARBLE_DNS_NAMES")
 
 	// Abort, if we cannot find an endpoint
 	if original["libos.entrypoint"] == nil {
@@ -116,8 +120,20 @@ func parseTreeForChanges(tree *toml.Tree) (map[string]interface{}, map[string]in
 		changes["loader.argv0_override"] = original["libos.entrypoint"].(string)
 	}
 
+	// If insecure host environment is disabled (which hopefully it is), specify the required passthrough variables
 	if original["loader.insecure__use_host_env"] == nil || !original["loader.insecure__use_host_env"].(bool) {
-		changes["loader.insecure__use_host_env"] = 1
+		if original["loader.env.EDG_MARBLE_COORDINATOR_ADDR"] == nil {
+			changes["loader.env.EDG_MARBLE_COORDINATOR_ADDR"] = "{ passthrough = true }"
+		}
+		if original["loader.env.EDG_MARBLE_TYPE"] == nil {
+			changes["loader.env.EDG_MARBLE_TYPE"] = "{ passthrough = true }"
+		}
+		if original["loader.env.EDG_MARBLE_UUID_FILE"] == nil {
+			changes["loader.env.EDG_MARBLE_UUID_FILE"] = "{ passthrough = true }"
+		}
+		if original["loader.env.EDG_MARBLE_DNS_NAMES"] == nil {
+			changes["loader.env.EDG_MARBLE_DNS_NAMES"] = "{ passthrough = true }"
+		}
 	}
 
 	// Enable remote attestation
