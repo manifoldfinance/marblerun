@@ -96,17 +96,6 @@ func detectLibOS() (int, error) {
 }
 
 func prepareGraphene(hostfs afero.Fs) (string, error) {
-	// Filter env vars
-	// TODO: INSECURE! This is known, but for a proper solution we have to wait for environment variable filtering on the level of graphene.
-	// See: https://github.com/edgelesssys/marblerun/issues/158 & https://github.com/oscarlab/graphene/issues/2356
-	for _, env := range os.Environ() {
-		if !strings.HasPrefix(env, "EDG_") && !strings.HasPrefix(env, "LD_LIBRARY_PATH=") {
-			if err := os.Unsetenv(strings.SplitN(env, "=", 2)[0]); err != nil {
-				return "", err
-			}
-		}
-	}
-
 	// Save the passed argument which is our service to spawn
 	service := os.Args[0]
 
