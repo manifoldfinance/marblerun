@@ -116,14 +116,13 @@ func parseTreeForChanges(tree *toml.Tree) (map[string]interface{}, map[string]in
 		changes["loader.argv0_override"] = original["libos.entrypoint"].(string)
 	}
 
-	// Enable use "insecure" host env (which delegates the "secure" handling to Marblerun)
-	if original["loader.insecure__use_host_env"] == nil || original["loader.insecure__use_host_env"].(int64) == 0 {
+	if original["loader.insecure__use_host_env"] == nil || !original["loader.insecure__use_host_env"].(bool) {
 		changes["loader.insecure__use_host_env"] = 1
 	}
 
 	// Enable remote attestation
-	if original["sgx.remote_attestation"] == nil || original["sgx.remote_attestation"].(int64) == 0 {
-		changes["sgx.remote_attestation"] = 1
+	if original["sgx.remote_attestation"] == nil || !original["sgx.remote_attestation"].(bool) {
+		changes["sgx.remote_attestation"] = true
 	}
 
 	// Ensure at least 1024 MB of enclave memory for the premain Go runtime

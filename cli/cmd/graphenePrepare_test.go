@@ -16,7 +16,7 @@ import (
 
 const someManifest = `
 libos.entrypoint = "myapplication"
-sgx.remote_attestation = 0
+sgx.remote_attestation = false
 # Some comment here in between
 # This should not match: sgx.enclave_size - 2
 # This should also not match: sgx.enclave_size = 24M
@@ -93,7 +93,7 @@ func TestAppendAndReplace(t *testing.T) {
 	original["sgx.thread_num"] = tomlTree.Get("sgx.thread_num")
 
 	// Set some changes we want to perform
-	changes["sgx.remote_attestation"] = 1
+	changes["sgx.remote_attestation"] = true
 	changes["sgx.enclave_size"] = "1024M"
 	changes["sgx.thread_num"] = 16
 
@@ -109,7 +109,7 @@ func TestAppendAndReplace(t *testing.T) {
 	newTomlTree, err := toml.Load(string(someNewManifest))
 	assert.NoError(err)
 	newRemoteAttestation := newTomlTree.Get("sgx.remote_attestation")
-	assert.EqualValues(1, newRemoteAttestation.(int64))
+	assert.EqualValues(true, newRemoteAttestation.(bool))
 	newEnclaveSize := newTomlTree.Get("sgx.enclave_size")
 	assert.EqualValues("1024M", newEnclaveSize.(string))
 	newThreadNum := newTomlTree.Get("sgx.thread_num")
