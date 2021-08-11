@@ -83,8 +83,9 @@ sgx.trusted_files.nginx = "file:{{ install_dir }}/sbin/nginx"
 sgx.trusted_files.conf_dir = "file:{{ install_dir }}/conf/"
 sgx.trusted_files.html_dir = "file:{{ install_dir }}/html/"
 # MARBLERUN: these are provisioned by the Coordinator
-sgx.protected_files.cert    = "file:{{ install_dir }}/conf/server.crt"
-sgx.protected_files.privkey = "file:{{ install_dir }}/conf/server.key"
+# WORKAROUND: These need to be specified in the same way as Marblerun accesses them: https://github.com/oscarlab/graphene/issues/2622
+sgx.protected_files.cert    = "file:install/conf/server.crt"
+sgx.protected_files.privkey = "file:install/conf/server.key"
 
 sgx.trusted_files.runtime = "file:{{ graphene.runtimedir() }}/"
 sgx.trusted_files.arch_libdir = "file:{{ arch_libdir }}/"
