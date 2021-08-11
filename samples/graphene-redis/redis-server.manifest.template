@@ -24,8 +24,11 @@ loader.log_level = "{{ log_level }}"
 loader.insecure__use_cmdline_argv = true
 # MARBLERUN: argv0 must be the path to the actual application
 loader.argv0_override = "redis-server"
-# MARBLERUN: Forward environment variables from the host. Don't use this on production!
-loader.insecure__use_host_env = 1
+# MARBLERUN: Forward Marble related environment variables from the host.
+loader.env.EDG_MARBLE_COORDINATOR_ADDR = { passthrough = true }
+loader.env.EDG_MARBLE_TYPE = { passthrough = true }
+loader.env.EDG_MARBLE_UUID_FILE = { passthrough = true }
+loader.env.EDG_MARBLE_DNS_NAMES = { passthrough = true }
 
 ################################# ENV VARS ####################################
 
