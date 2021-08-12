@@ -1,30 +1,35 @@
 name: Publish OpenAPI documentation
 on:
   push:
-    path:
-      - './coordinator/server/client_api.go'
+    branches:
+      - master
+    paths:
+      - "/coordinator/server/client_api.go"
+      - "/docs/client_api_request.go"
+      - "/docs/client_api_response.go"
+      - "/docs/docs.go"
 jobs:
   publish-to-docs:
     runs-on: ubuntu-18.04
     steps:
       - name: Download go-swagger
-        run: curl -o /usr/local/bin/swagger -L'#' "$download_url"
+        run: wget -O /usr/local/bin/swagger https://api.github.com/repos/go-swagger/go-swagger/releases/latest
+
+      - name: Make file executable
+        run: chmod +x /usr/local/bin/swagger
+
+      - name: Generate Swagger file from annotations
+        run: swagger generate spec -m --compact --exclude-deps -o ./swagger.json
         env:
-          download_url : $(curl -s https://api.github.com/repos/go-swagger/go-swagger/releases/latest | jq -r '.assets[] | select(.name | contains("'"$(uname | tr '[:upper:]' '[:lower:]')"'_amd64")) | .browser_download_url')
+          SWAGGER_GENERATE_EXTENSION: false
 
-      - run: chmod +x /usr/local/bin/swagger
-
-      - name: generate Swagger file
-        run:  swagger generate spec -m --compact --exclude-deps -o ./swagger.json
-        env:
-          SWAGGER_GENERATE_EXTENSION : false
-
-      - name: Copy
+      - name: Publish file to documentation
         uses: andstor/copycat-action@v3
         with:
-          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          personal_token: ${{ secrets.CI_GITHUB_REPOSITORY }}
           src_path: /swagger.json
-          dst_path: /marblerun/_media/swagger.json
           dst_owner: edgelesssys
           dst_repo_name: docs.edgeless.systems
+          dst_branch: action/marblerun/update-swagger
+          dst_path: /marblerun/_media/swagger.json
           commit_message: Update OpenAPI doc of MarbleRun
