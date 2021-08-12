@@ -9,7 +9,7 @@ on:
       - 'docs/client_api_request.go'
       - 'docs/client_api_response.go'
       - 'docs/docs.go'
-      - './swagger.json'
+      - 'swagger.json'
       - '.github/workflows/*'
 jobs:
   publish-to-docs:
@@ -20,6 +20,9 @@ jobs:
 
       - name: Make file executable
         run: chmod +x /usr/local/bin/swagger
+
+        run: pwd
+        run: ls
 
       - name: Generate Swagger file from annotations
         run: swagger generate spec -m --compact --exclude-deps -o ./swagger.json
