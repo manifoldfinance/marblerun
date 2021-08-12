@@ -25,7 +25,7 @@
                 },
                 "Env": {
                     "IS_FIRST": "true",
-                    "SEAL_KEY": "{{ hex .Marblerun.SealKey }}",
+                    "SEAL_KEY": "{{ hex .MarbleRun.SealKey }}",
                     "TEST_SECRET_SYMMETRIC_KEY": "{{ raw .Secrets.symmetric_key_shared }}",
                     "TEST_SECRET_CERT": "{{ pem .Secrets.cert_shared.Cert }}",
                     "TEST_SECRET_PRIVATE_CERT": "{{ pem .Secrets.cert_private.Cert }}"
@@ -47,7 +47,7 @@
             "Package": "backend",
             "Parameters": {
                 "Env": {
-                    "SEAL_KEY": "{{ hex .Marblerun.SealKey }}",
+                    "SEAL_KEY": "{{ hex .MarbleRun.SealKey }}",
                     "TEST_SECRET_CERT": "{{ pem .Secrets.cert_shared.Cert }}",
                     "TEST_SECRET_PRIVATE_CERT": "{{ pem .Secrets.cert_private.Cert }}"
                 },
@@ -66,7 +66,7 @@
             "Package": "frontend",
             "Parameters": {
                 "Env": {
-                    "SEAL_KEY": "{{ hex .Marblerun.SealKey }}"
+                    "SEAL_KEY": "{{ hex .MarbleRun.SealKey }}"
                 }
             }
         }
@@ -87,7 +87,7 @@
             "Type": "cert-rsa",
             "Cert": {
                 "Subject": {
-                    "CommonName": "Marblerun Unit Test"
+                    "CommonName": "MarbleRun Unit Test"
                 }
             },
             "ValidFor": 7
@@ -97,7 +97,7 @@
             "Type": "cert-ed25519",
             "Cert": {
                 "Subject": {
-                    "CommonName": "Marblerun Unit Test"
+                    "CommonName": "MarbleRun Unit Test"
                 }
             },
             "ValidFor": 7
@@ -108,7 +108,7 @@
             "Size": 2048,
             "Cert": {
                 "Subject": {
-                    "CommonName": "Marblerun Unit Test"
+                    "CommonName": "MarbleRun Unit Test"
                 }
             },
             "ValidFor": 7
